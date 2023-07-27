@@ -1,4 +1,4 @@
-######越跑越低，效果很差， 类似于0.5 0.5 0.4375 0.5
+######收敛到0.7
 #coding=utf-8
 
 import torch
@@ -62,14 +62,6 @@ loader = torch.utils.data.DataLoader(dataset=dataset_train,
                                      shuffle=True,
                                      drop_last=True)
 
-for i, (input_ids, attention_mask, token_type_ids,
-        labels) in enumerate(loader):
-    input_ids = input_ids.to(device)
-    attention_mask = attention_mask.to(device)
-    token_type_ids = token_type_ids.to(device)
-    labels = labels.to(device)
-    break
-
 #加载预训练模型
 pretrained = BertModel.from_pretrained('bert-base-chinese').to(device)#TODO:修改此处使用的预训练模型，并测试其效果
 # pretrained = BertModel.from_pretrained('bert-base-chinese')#TODO:修改此处使用的预训练模型，并测试其效果
@@ -82,10 +74,10 @@ for param in pretrained.parameters():
 class Model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.fc = torch.nn.Sequential( torch.nn.Conv1d(1, 16, kernel_size=3,padding=1),torch.nn.BatchNorm1d(16), torch.nn.ReLU(True) )
-        self.fc2 = torch.nn.Sequential( torch.nn.Linear(16 * 768, 2))
-        self.fc3 = torch.nn.Sequential( torch.nn.Linear(800, 200), torch.nn.BatchNorm1d(200), torch.nn.ReLU(True))
-        self.fc4 = torch.nn.Sequential( torch.nn.Linear(200, 2), torch.nn.BatchNorm1d(2), torch.nn.ReLU(True))
+        self.fc1 = torch.nn.Sequential( torch.nn.Conv1d(1, 16, kernel_size=3,padding=1),torch.nn.BatchNorm1d(16), torch.nn.ReLU(True) )
+        self.fc2 = torch.nn.Sequential( torch.nn.Conv1d(16, 64, kernel_size=3,padding=1),torch.nn.BatchNorm1d(64), torch.nn.ReLU(True) )
+        self.fc3 = torch.nn.Sequential( torch.nn.Conv1d(64, 256, kernel_size=3,padding=1),torch.nn.BatchNorm1d(256), torch.nn.ReLU(True) )
+        self.fc4 = torch.nn.Sequential( torch.nn.Linear(256*768, 2), torch.nn.BatchNorm1d(2), torch.nn.ReLU(True))
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         input_ids = input_ids.to(device)
@@ -97,19 +89,17 @@ class Model(torch.nn.Module):
                              token_type_ids=token_type_ids)
         out = out.last_hidden_state[:, 0]
         out = out.view(out.shape[0],-1,768)
-        out = self.fc(out)
-        out = out.view(out.shape[0],-1)
+        out = self.fc1(out)
         out = self.fc2(out)
+        out = self.fc3(out)
+        out = out.view(out.shape[0],-1)
+        out = self.fc4(out)
         out = out.softmax(dim=1)
         return out
 
 
 model = Model()
-
 model = model.to(device)
-model(input_ids=input_ids,
-      attention_mask=attention_mask,
-      token_type_ids=token_type_ids)
 
 print("%%%3")
 
@@ -175,7 +165,6 @@ for j in range(30):
         optimizer.step()
         optimizer.zero_grad()
 
-    test()
     test()
 
 print(accuracy)

@@ -63,14 +63,6 @@ loader = torch.utils.data.DataLoader(dataset=dataset_train,
                                      shuffle=True,
                                      drop_last=True)
 
-for i, (input_ids, attention_mask, token_type_ids,
-        labels) in enumerate(loader):
-    input_ids = input_ids.to(device)
-    attention_mask = attention_mask.to(device)
-    token_type_ids = token_type_ids.to(device)
-    labels = labels.to(device)
-    break
-
 #加载预训练模型
 pretrained = BertModel.from_pretrained('bert-base-chinese').to(device)#TODO:修改此处使用的预训练模型，并测试其效果
 # pretrained = BertModel.from_pretrained('bert-base-chinese')#TODO:修改此处使用的预训练模型，并测试其效果
@@ -108,14 +100,11 @@ class Model(torch.nn.Module):
 model = Model()
 
 model = model.to(device)
-model(input_ids=input_ids,
-      attention_mask=attention_mask,
-      token_type_ids=token_type_ids)
 
 print("%%%3")
 
 #训练下游任务模型的参数
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3,weight_decay=1e-5) #5e-3
+optimizer = torch.optim.Adam(model.parameters(), lr=5e-3,weight_decay=1e-5) #lr = 5e-3
 criterion = torch.nn.CrossEntropyLoss()
 
 accuracy = []
@@ -140,10 +129,6 @@ def test():
         attention_mask = attention_mask.to(device)
         token_type_ids = token_type_ids.to(device)
         labels = labels.to(device)
-        #         if i == 5:
-        #             break
-
-        #         print(i)
 
         with torch.no_grad():
             out = model(input_ids=input_ids,
@@ -159,7 +144,7 @@ def test():
     accuracy.append(correct / total)
 
 
-for j in range(60):
+for j in range(80):
     model.train()
     for i, (input_ids, attention_mask, token_type_ids,
             labels) in enumerate(loader):
@@ -176,7 +161,6 @@ for j in range(60):
         optimizer.step()
         optimizer.zero_grad()
     print("round ", j)
-    test()
     test()
 
 import matplotlib.pyplot as plt
